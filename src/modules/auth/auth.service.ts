@@ -2,12 +2,13 @@ import bcrypt from 'bcrypt';
 import { PrismaClient } from '@prisma/client';
 import { JWT } from '@fastify/jwt';
 import { AppError, NotFoundError, UnauthorizedError } from '@/common/errors.js';
-import { AuthLoginBody, AuthRegisterBody } from './auth.schema.js';
+import { getNormalizedUserAgent } from '@/common/utils/ua-parser.js';
+import { LoginBody, RegisterBody, SessionsGetResponse } from './auth.schema.js';
 
 export class AuthService {
   constructor(private prisma: PrismaClient, private jwt: JWT) {}
 
-  async register(body: AuthRegisterBody) {
+  async register(body: RegisterBody) {
     const candidate = await this.prisma.user.findUnique({ where: { login: body.login } });
     if (candidate) throw new AppError(409, 'Login is used');
 
@@ -19,7 +20,7 @@ export class AuthService {
     });
   }
 
-  async login(body: AuthLoginBody, userAgent?: string) {
+  async login(body: LoginBody, rawUserAgent?: string) {
     const user = await this.prisma.user.findUnique({
       where: { login: body.login },
     });
@@ -28,17 +29,36 @@ export class AuthService {
       throw new UnauthorizedError();
     }
 
-    const accessToken = this.generateAccessToken(user.id, user.roleId);
-    const refreshToken = this.generateRefreshToken(user.id, user.roleId);
+    const expirationDays = 30;
+    const expiresAt = new Date(Date.now() + expirationDays * 24 * 60 * 60 * 1000);
 
-    await this.prisma.refreshToken.create({
-      data: {
-        token: refreshToken,
+    const accessToken = this.generateAccessToken(user.id, user.roleId);
+    const refreshToken = this.generateRefreshToken(user.id, user.roleId, expirationDays);
+
+    const userAgent = getNormalizedUserAgent(rawUserAgent);
+
+    const updated = await this.prisma.refreshToken.updateMany({
+      where: {
         userId: user.id,
         userAgent,
-        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-      }
+      },
+      data: {
+        token: refreshToken,
+        expiresAt,
+        createdAt: new Date(),
+      },
     });
+
+    if (!updated.count) {
+      await this.prisma.refreshToken.create({
+        data: {
+          token: refreshToken,
+          userId: user.id,
+          userAgent,
+          expiresAt
+        }
+      });
+    }
 
     return { accessToken, refreshToken };
   }
@@ -70,7 +90,11 @@ export class AuthService {
     });
   }
 
-  async logoutFromAllDevices(currentToken: string) {
+  async logoutFromAllDevices(currentToken?: string) {
+    if (!currentToken) {
+      throw new UnauthorizedError();
+    }
+
     const session = await this.prisma.refreshToken.findUnique({
       where: { token: currentToken },
       select: { userId: true }
@@ -86,6 +110,48 @@ export class AuthService {
         token: { not: currentToken }
       }
     });
+  }
+
+  async getSessions(userId: string, currentToken?: string) {
+    if (!userId || !currentToken) {
+      throw new UnauthorizedError();
+    }
+
+    const sessions = await this.prisma.refreshToken.findMany({
+      where: {
+        userId,
+        expiresAt: { gt: new Date() }
+      },
+      select: {
+        id: true,
+        token: true,
+        userAgent: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const result: SessionsGetResponse = sessions.map(session => ({
+      id: session.id,
+      userAgent: session.userAgent,
+      createdAt: session.createdAt as unknown as string,
+      isCurrent: session.token === currentToken,
+    }));
+
+    return result;
+  }
+
+  async deleteSession(sessionId: string, userId: string) {
+    const deleted = await this.prisma.refreshToken.deleteMany({
+      where: {
+        id: sessionId,
+        userId,
+      }
+    });
+
+    if (!deleted.count) {
+      throw new NotFoundError();
+    }
   }
 
   async getUserInfo(id: string) {
@@ -110,7 +176,7 @@ export class AuthService {
     return this.jwt.sign({ id, roleId }, { expiresIn: '15m' });
   }
 
-  private generateRefreshToken(id: string, roleId: string) {
-    return this.jwt.sign({ id, roleId }, { expiresIn: '30d' });
+  private generateRefreshToken(id: string, roleId: string, expirationDays: number) {
+    return this.jwt.sign({ id, roleId }, { expiresIn: `${expirationDays}d` });
   }
 }

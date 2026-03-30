@@ -1,16 +1,16 @@
 import { FastifyInstance, FastifyRequest } from 'fastify';
 import { AuthService } from './auth.service.js';
-import { AuthLoginBody, authLoginSchema, AuthRegisterBody, authRegisterSchema } from './auth.schema.js';
+import { LoginBody, loginSchema, RegisterBody, registerSchema, sessionsGetSchema } from './auth.schema.js';
 
 export default async function(app: FastifyInstance) {
   const authService = new AuthService(app.prisma, app.jwt);
 
-  app.post('/register', { schema: authRegisterSchema }, async (request: FastifyRequest<{ Body: AuthRegisterBody }>, reply) => {
+  app.post('/register', { schema: registerSchema }, async (request: FastifyRequest<{ Body: RegisterBody }>, reply) => {
     const user = await authService.register(request.body);
     return reply.send(user);
   });
 
-  app.post('/login', { schema: authLoginSchema }, async (request: FastifyRequest<{ Body: AuthLoginBody }>, reply) => {
+  app.post('/login', { schema: loginSchema }, async (request: FastifyRequest<{ Body: LoginBody }>, reply) => {
     const userAgent = request.headers['user-agent'];
 
     const { accessToken, refreshToken } = await authService.login(request.body, userAgent);
@@ -34,10 +34,9 @@ export default async function(app: FastifyInstance) {
 
   app.post('/logout', async (request, reply) => {
     const token = request.cookies.refreshToken;
-    if (token) {
-      await authService.logout(token);
-    }
-    
+
+    await authService.logout(token);
+
     reply
       .clearCookie('refreshToken', { path: '/' })
       .send();
@@ -45,10 +44,27 @@ export default async function(app: FastifyInstance) {
 
   app.post('/logout-all', async (request, reply) => {
     const token = request.cookies.refreshToken;
-    if (token) {
-      await authService.logoutFromAllDevices(token);
-    }
-    
+
+    await authService.logoutFromAllDevices(token);
+
+    reply.send();
+  });
+
+  app.get('/sessions', { schema: sessionsGetSchema, preHandler: [app.isAuth] }, async (request, reply) => {
+    const { id } = request.user as { id: string };
+    const token = request.cookies.refreshToken;
+
+    const sessions = await authService.getSessions(id, token);
+
+    reply.send(sessions);
+  });
+
+  app.delete('/sessions/:id', { preHandler: [app.isAuth] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const user = request.user as { id: string };
+
+    await authService.deleteSession(id, user.id);
+
     reply.send();
   });
 

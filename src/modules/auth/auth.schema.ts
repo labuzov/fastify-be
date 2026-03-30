@@ -1,7 +1,7 @@
 import { FastifySchema } from 'fastify';
 import { FromSchema } from 'json-schema-to-ts';
 
-export const authRegisterBodySchema = {
+export const registerBodySchema = {
   type: 'object',
   required: ['login', 'password'],
   properties: {
@@ -11,14 +11,14 @@ export const authRegisterBodySchema = {
   additionalProperties: false,
 } as const;
 
-export const authRegisterSchema: FastifySchema = {
-  body: authRegisterBodySchema,
+export type RegisterBody = FromSchema<typeof registerBodySchema>;
+
+export const registerSchema: FastifySchema = {
+  body: registerBodySchema,
 };
 
-export type AuthRegisterBody = FromSchema<typeof authRegisterBodySchema>;
 
-
-export const authLoginBodySchema = {
+export const loginBodySchema = {
   type: 'object',
   required: ['login', 'password'],
   properties: {
@@ -29,8 +29,30 @@ export const authLoginBodySchema = {
   additionalProperties: false,
 } as const;
 
-export const authLoginSchema: FastifySchema = {
-  body: authLoginBodySchema,
+export type LoginBody = FromSchema<typeof loginBodySchema>;
+
+export const loginSchema: FastifySchema = {
+  body: loginBodySchema,
 };
 
-export type AuthLoginBody = FromSchema<typeof authLoginBodySchema>;
+
+export const sessionsGetResponseSchema = {
+  200: {
+    type: 'array',
+    items: {
+      type: 'object',
+      properties: {
+        id: { type: 'string' },
+        userAgent: { type: 'string', nullable: true },
+        createdAt: { type: 'string', format: 'date-time' },
+        isCurrent: { type: 'boolean' }
+      }
+    }
+  },
+} as const;
+
+export type SessionsGetResponse = FromSchema<typeof sessionsGetResponseSchema[200]>;
+
+export const sessionsGetSchema: FastifySchema = {
+  response: sessionsGetResponseSchema,
+};
