@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String   @id @default(uuid())
+  login         String   @unique
+  name          String?
+  password      String
+  roleId        String
+  role          Role     @relation(fields: [roleId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  isHidden      Boolean?
+  refreshTokens RefreshToken[]
+
+  @@map("users")
+}
+
+model Role {
+  id          String           @id @default(uuid())
+  name        String           @unique
+  isHidden    Boolean?
+  permissions RolePermission[]
+  users       User[]
+
+  @@map("roles")
+}
+
+model RolePermission {
+  id            String @id @default(uuid())
+  roleId        String
+  role          Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permissionKey String
+  conditions    Json?
+
+  @@unique([roleId, permissionKey])
+  @@map("role_permissions")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  userAgent String?
+
+  @@map("refresh_tokens")
+}
