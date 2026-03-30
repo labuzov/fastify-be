@@ -3,9 +3,9 @@ import { FromSchema } from 'json-schema-to-ts';
 
 export const registerBodySchema = {
   type: 'object',
-  required: ['login', 'password'],
+  required: ['email', 'password'],
   properties: {
-    login: { type: 'string', minLength: 6 },
+    email: { type: 'string', minLength: 6 },
     password: { type: 'string', minLength: 6 },
   },
   additionalProperties: false,
@@ -20,11 +20,10 @@ export const registerSchema: FastifySchema = {
 
 export const loginBodySchema = {
   type: 'object',
-  required: ['login', 'password'],
+  required: ['email', 'password'],
   properties: {
-    login: { type: 'string' },
+    email: { type: 'string' },
     password: { type: 'string' },
-    rememberMe: { type: 'boolean' },
   },
   additionalProperties: false,
 } as const;
@@ -55,4 +54,20 @@ export type SessionsGetResponse = FromSchema<typeof sessionsGetResponseSchema[20
 
 export const sessionsGetSchema: FastifySchema = {
   response: sessionsGetResponseSchema,
+};
+
+
+export const verifyEmailBodySchema = {
+  type: 'object',
+  required: ['code'],
+  properties: {
+    code: { type: 'string', minLength: 6, maxLength: 6 },
+  },
+  additionalProperties: false,
+} as const;
+
+export type VerifyEmailBody = FromSchema<typeof verifyEmailBodySchema>;
+
+export const verifyEmailSchema: FastifySchema = {
+  body: verifyEmailBodySchema,
 };

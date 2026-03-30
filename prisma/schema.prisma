@@ -7,16 +7,19 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(uuid())
-  login         String   @unique
-  name          String?
-  password      String
-  roleId        String
-  role          Role     @relation(fields: [roleId], references: [id])
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  isHidden      Boolean?
-  refreshTokens RefreshToken[]
+  id                String   @id @default(uuid())
+  email             String   @unique
+  name              String?
+  password          String
+  isEmailVerified   Boolean  @default(false)
+  roleId            String
+  role              Role     @relation(fields: [roleId], references: [id])
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  isHidden          Boolean?
+
+  refreshTokens     RefreshToken[]
+  verificationCodes VerificationCode[]
 
   @@map("users")
 }
@@ -25,6 +28,7 @@ model Role {
   id          String           @id @default(uuid())
   name        String           @unique
   isHidden    Boolean?
+
   permissions RolePermission[]
   users       User[]
 
@@ -52,4 +56,18 @@ model RefreshToken {
   userAgent String?
 
   @@map("refresh_tokens")
+}
+
+model VerificationCode {
+  id        String           @id @default(uuid())
+  code      String
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  attempts  Int              @default(0)
+  createdAt DateTime         @default(now())
+  expiresAt DateTime
+
+  @@unique([userId, type])
+  @@map("verification_codes")
 }

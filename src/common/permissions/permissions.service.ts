@@ -12,7 +12,7 @@ export class PermissionService {
   async getRolePermissions(roleId: string): Promise<PermissionData[]> {
     const cached = rolePermissionsCache.get<PermissionData[]>(roleId);
     if (cached) return cached;
-    
+
     const perms = await this.prisma.rolePermission.findMany({
       where: { roleId },
       select: { permissionKey: true, conditions: true }
