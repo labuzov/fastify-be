@@ -1,6 +1,6 @@
 import { FastifyInstance, FastifyRequest } from 'fastify';
 import { AuthService } from './auth.service.js';
-import { LoginBody, loginSchema, RegisterBody, registerSchema, sessionsGetSchema, VerifyEmailBody, verifyEmailSchema } from './auth.schema.js';
+import { LoginBody, loginSchema, RegisterBody, registerSchema, sessionsGetSchema } from './auth.schema.js';
 import { VERIFICATION_TYPE } from '@/common/verification/types.js';
 
 export default async function(app: FastifyInstance) {
@@ -67,40 +67,5 @@ export default async function(app: FastifyInstance) {
     await authService.deleteSession(id, user.id);
 
     reply.send();
-  });
-
-  app.post('/verify/email',
-    { schema: verifyEmailSchema, preHandler: [app.isAuth] }, async (request: FastifyRequest<{ Body: VerifyEmailBody }>, reply) => {
-    const { id } = request.user as { id: string };
-
-    const verified = await app.verification.validateAndUse(
-      id, request.body.code, VERIFICATION_TYPE.EMAIL_VERIFICATION
-    );
-
-    if (verified) await authService.verifyEmail(id);
-
-    reply.send();
-  });
-
-  app.post('/verify/email/send',
-    { preHandler: [app.isAuth] }, async (request, reply) => {
-    const { id } = request.user as { id: string };
-
-    const code = await app.verification.createCode(
-      id, VERIFICATION_TYPE.EMAIL_VERIFICATION
-    );
-
-    reply.send({ code });
-  });
-
-  app.get('/me', { preHandler: [app.isAuth] }, async (request, reply) => {
-    const { id, roleId } = request.user as { id: string, roleId: string };
-
-    const [user, permissions] = await Promise.all([
-      authService.getUserInfo(id),
-      app.permissions.getRolePermissions(roleId)
-    ]);
-
-    reply.send({ ...user, permissions });
   });
 }

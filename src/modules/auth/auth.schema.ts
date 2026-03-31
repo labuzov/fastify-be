@@ -55,19 +55,3 @@ export type SessionsGetResponse = FromSchema<typeof sessionsGetResponseSchema[20
 export const sessionsGetSchema: FastifySchema = {
   response: sessionsGetResponseSchema,
 };
-
-
-export const verifyEmailBodySchema = {
-  type: 'object',
-  required: ['code'],
-  properties: {
-    code: { type: 'string', minLength: 6, maxLength: 6 },
-  },
-  additionalProperties: false,
-} as const;
-
-export type VerifyEmailBody = FromSchema<typeof verifyEmailBodySchema>;
-
-export const verifyEmailSchema: FastifySchema = {
-  body: verifyEmailBodySchema,
-};

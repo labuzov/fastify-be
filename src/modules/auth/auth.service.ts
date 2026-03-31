@@ -155,32 +155,6 @@ export class AuthService {
     }
   }
 
-  async getUserInfo(id: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        email: true,
-        isEmailVerified: true,
-        name: true,
-        roleId: true,
-      },
-    });
-
-    if (!user) {
-      throw new NotFoundError();
-    }
-
-    return user;
-  }
-
-  async verifyEmail(userId: string) {
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { isEmailVerified: true }
-    });
-  }
-
   private generateAccessToken(id: string, roleId: string) {
     return this.jwt.sign({ id, roleId }, { expiresIn: '15m' });
   }
