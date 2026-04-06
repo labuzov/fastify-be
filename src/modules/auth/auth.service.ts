@@ -1,7 +1,7 @@
 import bcrypt from 'bcrypt';
 import { PrismaClient } from '@prisma/client';
 import { JWT } from '@fastify/jwt';
-import { AppError, NotFoundError, UnauthorizedError } from '@/common/errors/appErrors.js';
+import { AppError, BadRequestError, ConflictError, NotFoundError, UnauthorizedError } from '@/common/errors/appErrors.js';
 import { ERROR_CODE } from '@/common/errors/errorCodes.js';
 import { getNormalizedUserAgent } from '@/common/utils/ua-parser.js';
 import { LoginBody, RegisterBody, SessionsGetResponse } from './auth.schema.js';
@@ -10,14 +10,19 @@ export class AuthService {
   constructor(private prisma: PrismaClient, private jwt: JWT) {}
 
   async register(body: RegisterBody) {
+    const defaultRole = await this.prisma.role.findFirst({
+      where: { isDefault: true }
+    });
+
+    if (!defaultRole) throw new AppError();
+
     const candidate = await this.prisma.user.findUnique({ where: { email: body.email } });
-    if (candidate) throw new AppError(409, ERROR_CODE.AUTH_EMAIL_ALREADY_EXISTS);
+    if (candidate) throw new ConflictError(ERROR_CODE.AUTH_EMAIL_ALREADY_EXISTS);
 
     const hashedPassword = await bcrypt.hash(body.password, 10);
 
-    return this.prisma.user.create({
-      data: { ...body, password: hashedPassword, roleId: '29d60f72-f8f8-46fc-b0f5-fdcde47fe871' },
-      select: { id: true, email: true }
+    await this.prisma.user.create({
+      data: { ...body, password: hashedPassword, roleId: defaultRole.id }
     });
   }
 
@@ -27,7 +32,7 @@ export class AuthService {
     });
 
     if (!user || !(await bcrypt.compare(body.password, user.password))) {
-      throw new UnauthorizedError();
+      throw new BadRequestError(ERROR_CODE.AUTH_INVALID_CREDENTIALS);
     }
 
     const expirationDays = 30;

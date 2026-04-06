@@ -9,8 +9,8 @@ export default async function(app: FastifyInstance) {
   app.post('/register',
     { config: { rateLimit: StrictRateLimit }, schema: registerSchema },
     async (request: FastifyRequest<{ Body: RegisterBody }>, reply) => {
-      const user = await authService.register(request.body);
-      return reply.send(user);
+      await authService.register(request.body);
+      reply.send();
     }
   );
 

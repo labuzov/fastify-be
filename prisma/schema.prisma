@@ -25,9 +25,11 @@ model User {
 }
 
 model Role {
-  id          String           @id @default(uuid())
-  name        String           @unique
-  isHidden    Boolean?
+  id          String  @id @default(uuid())
+  name        String  @unique
+  isDefault   Boolean @default(false)
+  isSystem    Boolean @default(false)
+  isHidden    Boolean @default(false)
 
   permissions RolePermission[]
   users       User[]
@@ -59,13 +61,13 @@ model RefreshToken {
 }
 
 model VerificationCode {
-  id        String           @id @default(uuid())
+  id        String   @id @default(uuid())
   code      String
   userId    String
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   type      String
-  attempts  Int              @default(0)
-  createdAt DateTime         @default(now())
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
   expiresAt DateTime
 
   @@unique([userId, type])
