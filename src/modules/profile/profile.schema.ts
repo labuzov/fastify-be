@@ -1,34 +1,29 @@
+import z from 'zod';
+import { zodToJsonSchema } from 'zod-to-json-schema';
 import { FastifySchema } from 'fastify';
-import { FromSchema } from 'json-schema-to-ts';
 
-export const changePasswordBodySchema = {
-  type: 'object',
-  required: ['password', 'newPassword'],
-  properties: {
-    password: { type: 'string' },
-    newPassword: { type: 'string', minLength: 6, maxLength: 32 },
-  },
-  additionalProperties: false,
-} as const;
+const changePasswordBodyZodSchema = z.object({
+  password: z.string(),
+  newPassword: z.string().min(6).max(32)
+});
 
-export type ChangePasswordBody = FromSchema<typeof changePasswordBodySchema>;
+export const changePasswordBodySchema = zodToJsonSchema(changePasswordBodyZodSchema);
 
 export const changePasswordSchema: FastifySchema = {
   body: changePasswordBodySchema,
 };
 
 
-export const verifyEmailBodySchema = {
-  type: 'object',
-  required: ['code'],
-  properties: {
-    code: { type: 'string', minLength: 6, maxLength: 6 },
-  },
-  additionalProperties: false,
-} as const;
+const verifyEmailBodyZodSchema = z.object({
+  code: z.string().min(6).max(6)
+});
 
-export type VerifyEmailBody = FromSchema<typeof verifyEmailBodySchema>;
+export const verifyEmailBodySchema = zodToJsonSchema(verifyEmailBodyZodSchema);
 
 export const verifyEmailSchema: FastifySchema = {
   body: verifyEmailBodySchema,
 };
+
+
+export type ChangePasswordBody = z.infer<typeof changePasswordBodyZodSchema>;
+export type VerifyEmailBody = z.infer<typeof verifyEmailBodyZodSchema>;

@@ -4,7 +4,7 @@ import { JWT } from '@fastify/jwt';
 import { AppError, BadRequestError, ConflictError, NotFoundError, UnauthorizedError } from '@/common/errors/appErrors.js';
 import { ERROR_CODE } from '@/common/errors/errorCodes.js';
 import { getNormalizedUserAgent } from '@/common/utils/ua-parser.js';
-import { LoginBody, RegisterBody, SessionsGetResponse } from './auth.schema.js';
+import { LoginBody, RegisterBody, Session } from './auth.schema.js';
 
 export class AuthService {
   constructor(private prisma: PrismaClient, private jwt: JWT) {}
@@ -137,10 +137,10 @@ export class AuthService {
       orderBy: { createdAt: 'desc' }
     });
 
-    const result: SessionsGetResponse = sessions.map(session => ({
+    const result: Session[] = sessions.map(session => ({
       id: session.id,
       userAgent: session.userAgent,
-      createdAt: session.createdAt as unknown as string,
+      createdAt: session.createdAt,
       isCurrent: session.token === currentToken,
     }));
 

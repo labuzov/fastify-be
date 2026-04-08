@@ -1,57 +1,48 @@
+import z from 'zod';
+import { zodToJsonSchema } from 'zod-to-json-schema';
 import { FastifySchema } from 'fastify';
-import { FromSchema } from 'json-schema-to-ts';
 
-export const registerBodySchema = {
-  type: 'object',
-  required: ['email', 'password'],
-  properties: {
-    email: { type: 'string', minLength: 6, format: 'email' },
-    password: { type: 'string', minLength: 6 },
-  },
-  additionalProperties: false,
-} as const;
+const registerBodyZodSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(6).max(32)
+});
 
-export type RegisterBody = FromSchema<typeof registerBodySchema>;
+export const registerBodySchema = zodToJsonSchema(registerBodyZodSchema);
 
 export const registerSchema: FastifySchema = {
   body: registerBodySchema,
 };
 
 
-export const loginBodySchema = {
-  type: 'object',
-  required: ['email', 'password'],
-  properties: {
-    email: { type: 'string' },
-    password: { type: 'string' },
-  },
-  additionalProperties: false,
-} as const;
+const loginBodyZodSchema = z.object({
+  email: z.string().email(),
+  password: z.string()
+});
 
-export type LoginBody = FromSchema<typeof loginBodySchema>;
+export const loginBodySchema = zodToJsonSchema(loginBodyZodSchema);
 
 export const loginSchema: FastifySchema = {
   body: loginBodySchema,
 };
 
 
+const sessionZodSchema = z.object({
+  id: z.string(),
+  userAgent: z.string().nullable(),
+  createdAt: z.string().datetime().or(z.date()), 
+  isCurrent: z.boolean(),
+});
+
 export const sessionsGetResponseSchema = {
-  200: {
-    type: 'array',
-    items: {
-      type: 'object',
-      properties: {
-        id: { type: 'string' },
-        userAgent: { type: 'string', nullable: true },
-        createdAt: { type: 'string', format: 'date-time' },
-        isCurrent: { type: 'boolean' }
-      }
-    }
-  },
+  200: z.array(sessionZodSchema),
 } as const;
 
-export type SessionsGetResponse = FromSchema<typeof sessionsGetResponseSchema[200]>;
 
 export const sessionsGetSchema: FastifySchema = {
   response: sessionsGetResponseSchema,
 };
+
+
+export type RegisterBody = z.infer<typeof registerBodyZodSchema>;
+export type LoginBody = z.infer<typeof loginBodyZodSchema>;
+export type Session = z.infer<typeof sessionZodSchema>;

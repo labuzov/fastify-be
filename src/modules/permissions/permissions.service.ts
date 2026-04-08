@@ -1,13 +1,11 @@
-import { hiddenPermissions, PERMISSION, PermissionConditionsMetadata } from '@/common/permissions/types.js';
+import { permissionConditionsMetadata, visiblePermissions } from '@/common/permissions/types.js';
 
 export class PermissionsService {
   constructor() {}
 
   getPermissions() {
-    const visiblePerms = this.getVisiblePermissions();
-
-    const result = visiblePerms.map(key => {
-      const conditions = PermissionConditionsMetadata[key as keyof typeof PermissionConditionsMetadata] || null;
+    const result = visiblePermissions.map(key => {
+      const conditions = permissionConditionsMetadata[key as keyof typeof permissionConditionsMetadata] || null;
 
       return {
         key,
@@ -16,10 +14,5 @@ export class PermissionsService {
     });
 
     return result;
-  }
-
-  private getVisiblePermissions() {
-    const hiddenPerms = new Set(hiddenPermissions);
-    return Object.values(PERMISSION).filter(perm => !hiddenPerms.has(perm));
   }
 }

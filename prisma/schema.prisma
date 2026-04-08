@@ -27,6 +27,7 @@ model User {
 model Role {
   id          String  @id @default(uuid())
   name        String  @unique
+  description String?
   isDefault   Boolean @default(false)
   isSystem    Boolean @default(false)
   isHidden    Boolean @default(false)

@@ -44,7 +44,13 @@ export class ProfileService {
         email: true,
         isEmailVerified: true,
         name: true,
-        roleId: true,
+        role: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+          }
+        },
       },
     });
 
