@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { CONDITIONS, PERMISSION, permissionConditionsMetadata, visiblePermissions } from '@/common/permissions/types.js';
 import { BadRequestError, NotFoundError } from '@/common/errors/appErrors.js';
 import { ERROR_CODE } from '@/common/errors/errorCodes.js';
@@ -7,15 +7,28 @@ import { CreateRoleBody, PermissionItem, UpdateRoleBody } from './roles.schema.j
 export class RolesService {
   constructor(private prisma: PrismaClient) {}
 
-  async getRoles() {
-    const roles = await this.prisma.role.findMany({
-      where: { isHidden: false },
-      include: {
-        _count: { select: { users: true } }
-      }
-    });
+  async getRoles(params: { skip: number; take: number; search?: string }) {
+    const { skip, take, search } = params;
 
-    return roles;
+    const where: Prisma.RoleWhereInput = {
+      isHidden: false,
+      ...(search ? { name: { contains: search, mode: 'insensitive' } } : {}),
+    };
+
+    const [total, items] = await this.prisma.$transaction([
+      this.prisma.role.count({ where }),
+      this.prisma.role.findMany({
+        where,
+        skip,
+        take,
+        include: {
+          _count: { select: { users: true } }
+        },
+        orderBy: { name: 'asc' }
+      })
+    ]);
+
+    return { total, items };
   }
 
   async getRoleById(id: string) {

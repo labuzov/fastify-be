@@ -1,17 +1,36 @@
 import { FastifyInstance, FastifyRequest } from 'fastify';
 import { PERMISSION } from '@/common/permissions/types.js';
+import { toPaginatedData } from '@/common/utils/pagination.js';
 import { RolesService } from './roles.service.js';
-import { CreateRoleBody, createRoleSchema, DeleteRoleParams, deleteRoleSchema, GetRoleParams, getRoleSchema, UpdateRoleBody, UpdateRoleParams, updateRoleSchema } from './roles.schema.js';
+import {
+  CreateRoleBody,
+  createRoleSchema,
+  DeleteRoleParams,
+  deleteRoleSchema,
+  GetRoleParams,
+  getRoleSchema,
+  GetRolesQuery,
+  getRolesSchema,
+  UpdateRoleBody,
+  UpdateRoleParams,
+  updateRoleSchema
+} from './roles.schema.js';
 
 export default async function(app: FastifyInstance) {
   const rolesService = new RolesService(app.prisma);
 
   app.get('/',
-    { preHandler: [app.isAuth, app.hasAnyPermission([PERMISSION.ROLES_READ, PERMISSION.ROLES_MANAGE])] },
-    async (_, reply) => {
-      const roles = await rolesService.getRoles();
+    {
+      schema: getRolesSchema,
+      preHandler: [app.isAuth, app.hasAnyPermission([PERMISSION.ROLES_READ, PERMISSION.ROLES_MANAGE])]
+    },
+    async (request: FastifyRequest<{ Querystring: GetRolesQuery }>, reply) => {
+      const { page, take, limit, skip } = request.getPagination();
+      const { search } = request.query;
 
-      reply.send(roles);
+      const { total, items } = await rolesService.getRoles({ skip, take, search });
+
+      reply.send(toPaginatedData(items, total, page, limit));
     }
   );
 
